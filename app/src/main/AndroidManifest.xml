@@ -25,7 +25,7 @@
         </activity>
         <activity android:name=".CardboardActivity"
             android:screenOrientation="landscape"
-            android:configChanges="keyboardHidden">
+            android:configChanges="orientation|keyboardHidden">
 
         </activity>
     </application>
