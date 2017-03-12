@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/VRRenderer.iml" filepath="$PROJECT_DIR$/VRRenderer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/VR_Renderer.iml" filepath="$PROJECT_DIR$/VR_Renderer.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

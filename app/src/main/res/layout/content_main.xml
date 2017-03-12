@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -8,4 +8,38 @@
     tools:context="com.aj_ames.vrrenderer.MainActivity"
     tools:showIn="@layout/activity_main">
 
-</android.support.constraint.ConstraintLayout>
+    <Button
+        android:id="@+id/btn_volume"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Volume Toggle"
+        tools:layout_editor_absoluteY="260dp"
+        tools:layout_editor_absoluteX="-2dp"
+        android:layout_below="@+id/video_view"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="6dp" />
+
+    <com.google.vr.sdk.widgets.video.VrVideoView
+        android:id="@+id/video_view"
+        android:layout_width="401dp"
+        android:layout_height="250dp"
+        tools:layout_editor_absoluteX="5dp"
+        tools:layout_editor_absoluteY="2dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true" >
+
+    </com.google.vr.sdk.widgets.video.VrVideoView>
+
+    <SeekBar
+        android:id="@+id/seek_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="48dp"
+        android:layout_height="32dp"
+        android:layout_alignStart="@+id/video_view"
+        android:layout_below="@+id/btn_volume"
+        android:layout_marginStart="6dp"
+        tools:layout_editor_absoluteX="-1dp"
+        tools:layout_editor_absoluteY="318dp"
+        android:layout_alignParentEnd="true" />
+
+</RelativeLayout>
