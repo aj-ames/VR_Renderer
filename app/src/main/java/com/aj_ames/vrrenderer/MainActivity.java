@@ -2,6 +2,7 @@ package com.aj_ames.vrrenderer;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -23,10 +24,17 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(new Intent(MainActivity.this,CardboardActivity.class));
                 Snackbar.make(view, "Turning ON VR View", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
+                new Handler().postDelayed(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        startActivity(new Intent(MainActivity.this,CardboardActivity.class));
+                    }
+                }, 2000 );
             }
+
         });
     }
 
