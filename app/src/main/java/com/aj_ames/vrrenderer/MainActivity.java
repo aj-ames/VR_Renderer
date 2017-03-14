@@ -1,6 +1,7 @@
 package com.aj_ames.vrrenderer;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
@@ -10,8 +11,22 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.SeekBar;
 
-public class MainActivity extends AppCompatActivity {
+import com.google.vr.sdk.widgets.video.VrVideoEventListener;
+import com.google.vr.sdk.widgets.video.VrVideoView;
+
+import java.io.IOException;
+
+public class MainActivity extends AppCompatActivity  implements SeekBar.OnSeekBarChangeListener{
+
+    private VrVideoView mVrVideoView;
+    private SeekBar mSeekBar;
+    private Button mVolumeButton;
+
+    private boolean mIsPaused;
+    private boolean mIsMuted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +51,32 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
+
+        initViews();
+    }
+
+    private void initViews() {
+        mVrVideoView = (VrVideoView) findViewById(R.id.video_view);
+        mSeekBar = (SeekBar) findViewById(R.id.seek_bar);
+        mVolumeButton = (Button) findViewById(R.id.btn_volume);
+
+        mVolumeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                onVolumeToggleClicked();
+            }
+        });
+
+        mVrVideoView.setEventListener(new ActivityEventListener());
+        mSeekBar.setOnSeekBarChangeListener(this);
+    }
+
+    public void playPause() {
+
+    }
+
+    public void onVolumeToggleClicked() {
+
     }
 
     @Override
@@ -60,4 +101,81 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+    }
+
+    @Override
+    public void onStartTrackingTouch(SeekBar seekBar) {
+
+    }
+
+    @Override
+    public void onStopTrackingTouch(SeekBar seekBar) {
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mVrVideoView.pauseRendering();
+        mIsPaused = true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mVrVideoView.resumeRendering();
+        mIsPaused = false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        mVrVideoView.shutdown();
+        super.onDestroy();
+    }
+
+    private class ActivityEventListener extends VrVideoEventListener {
+        @Override
+        public void onLoadSuccess() {
+            super.onLoadSuccess();
+        }
+
+        @Override
+        public void onLoadError(String errorMessage) {
+            super.onLoadError(errorMessage);
+        }
+
+        @Override
+        public void onClick() {
+            super.onClick();
+        }
+
+        @Override
+        public void onNewFrame() {
+            super.onNewFrame();
+        }
+
+        @Override
+        public void onCompletion() {
+            super.onCompletion();
+        }
+    }
+
+    class VideoLoaderTask extends AsyncTask<Void, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(Void... voids) {
+            try {
+                VrVideoView.Options options = new VrVideoView.Options();
+                options.inputType = VrVideoView.Options.TYPE_MONO;
+                mVrVideoView.loadVideoFromAsset("seaturtle.mp4", options);
+            } catch( IOException e ) {
+                //Handle exception
+            }
+
+            return true;
+        }
+    }
 }
