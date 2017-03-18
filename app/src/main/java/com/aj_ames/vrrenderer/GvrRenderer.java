@@ -76,10 +76,10 @@ public class GvrRenderer implements GvrView.StereoRenderer {
 	private float[] transformMatrix;
 
 	private static final FloatBuffer RECT_VERTICES = GlUtil.createFloatBuffer(new float[] {
-			-2.0f, -2.0f,
-			2.0f, -2.0f,
-			-2.0f, 2.0f,
-			2.0f, 2.0f,
+			-1.75f, -1.75f,
+			1.75f, -1.75f,
+			-1.75f, 1.75f,
+			1.75f, 1.75f,
 	});
 
 	private static final FloatBuffer RECT_TEX_COORDS = GlUtil.createFloatBuffer(new float[] {
