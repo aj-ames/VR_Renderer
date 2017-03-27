@@ -2,6 +2,9 @@ package com.aj_ames.vrrenderer;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.res.AssetManager;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,35 +12,40 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 //import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Button;
-import android.widget.SeekBar;
+
 import android.widget.Toast;
 
-import com.google.vr.sdk.widgets.video.VrVideoEventListener;
-import com.google.vr.sdk.widgets.video.VrVideoView;
+import com.google.vr.sdk.widgets.pano.VrPanoramaEventListener;
+import com.google.vr.sdk.widgets.pano.VrPanoramaView;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
-public class MainActivity extends RuntimePermissions  implements SeekBar.OnSeekBarChangeListener{
+public class MainActivity extends RuntimePermissions {
 
     private static final int REQUEST_PERMISSIONS = 20;
 
-    private VrVideoView mVrVideoView;
-    private SeekBar mSeekBar;
-    private Button mVolumeButton;
+    private static final String TAG = MainActivity.class.getSimpleName();
 
-    private boolean mIsPaused;
-    private boolean mIsMuted;
+    private VrPanoramaView panoWidgetView;
+
+    public boolean loadImageSuccessful;
+    private Uri fileUri;
+    private VrPanoramaView.Options panoOptions = new VrPanoramaView.Options();
+    private ImageLoaderTask backgroundImageLoaderTask;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         MainActivity.super.requestAppPermissions(new
                         String[]{Manifest.permission.CAMERA,
@@ -62,6 +70,8 @@ public class MainActivity extends RuntimePermissions  implements SeekBar.OnSeekB
         });
 
         initViews();
+
+        handleIntent(getIntent());
     }
 
     @Override
@@ -70,27 +80,73 @@ public class MainActivity extends RuntimePermissions  implements SeekBar.OnSeekB
     }
 
     private void initViews() {
-        mVrVideoView = (VrVideoView) findViewById(R.id.video_view);
-        mSeekBar = (SeekBar) findViewById(R.id.seek_bar);
-        mVolumeButton = (Button) findViewById(R.id.btn_volume);
+        panoWidgetView = (VrPanoramaView) findViewById(R.id.pano_view);
+        panoWidgetView.setEventListener(new ActivityEventListener());
+    }
 
-        mVolumeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onVolumeToggleClicked();
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Log.i(TAG, this.hashCode() + ".onNewIntent()");
+        // Save the intent. This allows the getIntent() call in onCreate() to use this new Intent during
+        // future invocations.
+        setIntent(intent);
+        // Load the new image.
+        handleIntent(intent);
+    }
+
+    private void handleIntent(Intent intent) {
+        // Determine if the Intent contains a file to load.
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            Log.i(TAG, "ACTION_VIEW Intent recieved");
+
+            fileUri = intent.getData();
+            if (fileUri == null) {
+                Log.w(TAG, "No data uri specified. Use \"-d /path/filename\".");
+            } else {
+                Log.i(TAG, "Using file " + fileUri.toString());
             }
-        });
 
-        mVrVideoView.setEventListener(new ActivityEventListener());
-        mSeekBar.setOnSeekBarChangeListener(this);
+            panoOptions.inputType = intent.getIntExtra("inputType", VrPanoramaView.Options.TYPE_MONO);
+            Log.i(TAG, "Options.inputType = " + panoOptions.inputType);
+        } else {
+            Log.i(TAG, "Intent is not ACTION_VIEW. Using default pano image.");
+            fileUri = null;
+            panoOptions.inputType = VrPanoramaView.Options.TYPE_MONO;
+        }
+
+        // Load the bitmap in a background thread to avoid blocking the UI thread. This operation can
+        // take 100s of milliseconds.
+        if (backgroundImageLoaderTask != null) {
+            // Cancel any task from a previous intent sent to this activity.
+            backgroundImageLoaderTask.cancel(true);
+        }
+        backgroundImageLoaderTask = new ImageLoaderTask();
+        backgroundImageLoaderTask.execute(Pair.create(fileUri, panoOptions));
     }
 
-    public void playPause() {
-
+    @Override
+    protected void onPause() {
+        panoWidgetView.pauseRendering();
+        super.onPause();
     }
 
-    public void onVolumeToggleClicked() {
+    @Override
+    protected void onResume() {
+        super.onResume();
+        panoWidgetView.resumeRendering();
+    }
 
+    @Override
+    protected void onDestroy() {
+        // Destroy the widget and free memory.
+        panoWidgetView.shutdown();
+
+        // The background task has a 5 second timeout so it can potentially stay alive for 5 seconds
+        // after the activity is destroyed unless it is explicitly cancelled.
+        if (backgroundImageLoaderTask != null) {
+            backgroundImageLoaderTask.cancel(true);
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -115,81 +171,69 @@ public class MainActivity extends RuntimePermissions  implements SeekBar.OnSeekB
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+    class ImageLoaderTask extends AsyncTask<Pair<Uri, VrPanoramaView.Options>, Void, Boolean> {
 
-    }
-
-    @Override
-    public void onStartTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    public void onStopTrackingTouch(SeekBar seekBar) {
-
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mVrVideoView.pauseRendering();
-        mIsPaused = true;
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mVrVideoView.resumeRendering();
-        mIsPaused = false;
-    }
-
-    @Override
-    protected void onDestroy() {
-        mVrVideoView.shutdown();
-        super.onDestroy();
-    }
-
-    private class ActivityEventListener extends VrVideoEventListener {
+        /**
+         * Reads the bitmap from disk in the background and waits until it's loaded by pano widget.
+         */
         @Override
-        public void onLoadSuccess() {
-            super.onLoadSuccess();
-        }
+        protected Boolean doInBackground(Pair<Uri, VrPanoramaView.Options>... fileInformation) {
+            VrPanoramaView.Options panoOptions = null;  // It's safe to use null VrPanoramaView.Options.
+            InputStream istr = null;
+            if (fileInformation == null || fileInformation.length < 1
+                    || fileInformation[0] == null || fileInformation[0].first == null) {
+                AssetManager assetManager = getAssets();
+                try {
+                    istr = assetManager.open("andes.jpg");
+                    panoOptions = new VrPanoramaView.Options();
+                    panoOptions.inputType = VrPanoramaView.Options.TYPE_STEREO_OVER_UNDER;
+                } catch (IOException e) {
+                    Log.e(TAG, "Could not decode default bitmap: " + e);
+                    return false;
+                }
+            } else {
+                try {
+                    istr = new FileInputStream(new File(fileInformation[0].first.getPath()));
+                    panoOptions = fileInformation[0].second;
+                } catch (IOException e) {
+                    Log.e(TAG, "Could not load file: " + e);
+                    return false;
+                }
+            }
 
-        @Override
-        public void onLoadError(String errorMessage) {
-            super.onLoadError(errorMessage);
-        }
-
-        @Override
-        public void onClick() {
-            super.onClick();
-        }
-
-        @Override
-        public void onNewFrame() {
-            super.onNewFrame();
-        }
-
-        @Override
-        public void onCompletion() {
-            super.onCompletion();
-        }
-    }
-
-    class VideoLoaderTask extends AsyncTask<Void, Void, Boolean> {
-
-        @Override
-        protected Boolean doInBackground(Void... voids) {
+            panoWidgetView.loadImageFromBitmap(BitmapFactory.decodeStream(istr), panoOptions);
             try {
-                VrVideoView.Options options = new VrVideoView.Options();
-                options.inputType = VrVideoView.Options.TYPE_MONO;
-                mVrVideoView.loadVideoFromAsset("seaturtle.mp4", options);
-            } catch( IOException e ) {
-                //Handle exception
+                istr.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Could not close input stream: " + e);
             }
 
             return true;
+        }
+    }
+
+    /**
+     * Listen to the important events from widget.
+     */
+    private class ActivityEventListener extends VrPanoramaEventListener {
+        /**
+         * Called by pano widget on the UI thread when it's done loading the image.
+         */
+        @Override
+        public void onLoadSuccess() {
+            loadImageSuccessful = true;
+        }
+
+        /**
+         * Called by pano widget on the UI thread on any asynchronous error.
+         */
+        @Override
+        public void onLoadError(String errorMessage) {
+            loadImageSuccessful = false;
+            Toast.makeText(
+                    MainActivity.this, "Error loading pano: " + errorMessage, Toast.LENGTH_LONG)
+                    .show();
+            Log.e(TAG, "Error loading pano: " + errorMessage);
         }
     }
 }
